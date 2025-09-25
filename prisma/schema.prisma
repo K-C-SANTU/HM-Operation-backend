@@ -1,15 +1,115 @@
 generator client {
-  provider = "prisma-client-js"
+    provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "mongodb"
-  url      = env("MONGO_URI")
+    provider = "mongodb"
+    url      = env("MONGO_URI")
+}
+
+enum AccountType {
+    operation
+    hotel_management
+}
+
+enum ListOfPermissions {
+    read
+    write
 }
 
 model User {
-  id       String @id @default(auto()) @map("_id") @db.ObjectId
-  name     String
-  email    String @unique
-  password String
+    userId          String      @id @default(auto()) @map("_id") @db.ObjectId
+    firstName       String
+    lastName        String
+    email           String      @unique
+    password        String
+    operationRoleId String?     @db.ObjectId
+    businessId      String?     @db.ObjectId
+    hmRoleId        String?     @db.ObjectId
+    accountType     AccountType
+    URI             String      @default("/")
+    expiredDate     DateTime    @default(now())
+    createdDate     DateTime    @default(now())
+    updatedDate     DateTime?
+    createdBy       String?     @db.ObjectId
+    updatedBy       String?     @db.ObjectId
+
+    business      Business?      @relation(fields: [businessId], references: [businessId])
+    operationRole OperationRole? @relation(fields: [operationRoleId], references: [operationRoleId])
+    hmRoles       HMRoles?       @relation(fields: [hmRoleId], references: [roleId])
+
+    hmUsersSubscription HMUserSubscription?
+}
+
+model Business {
+    businessId   String              @id @default(auto()) @map("_id") @db.ObjectId
+    permissions  ListOfPermissions[] @default([])
+    businessName String
+    expiredDate  DateTime            @default(now())
+    createdDate  DateTime            @default(now())
+    updatedDate  DateTime?
+    createdBy    String              @db.ObjectId
+    updatedBy    String?             @db.ObjectId
+
+    users User[]
+}
+
+model OperationRole {
+    operationRoleId   String              @id @default(auto()) @map("_id") @db.ObjectId
+    operationRoleName String
+    permissions       ListOfPermissions[]
+    expiredDate       DateTime            @default(now())
+    createdDate       DateTime            @default(now())
+    updatedDate       DateTime?
+    createdBy         String?             @db.ObjectId
+    updatedBy         String?             @db.ObjectId
+
+    users User[]
+}
+
+model HMRoles {
+    roleId      String              @id @default(auto()) @map("_id") @db.ObjectId
+    businessId  String              @db.ObjectId
+    roleName    String
+    permissions ListOfPermissions[]
+    expiredDate DateTime            @default(now())
+    createdDate DateTime            @default(now())
+    updatedDate DateTime?
+    createdBy   String              @db.ObjectId
+    updatedBy   String?             @db.ObjectId
+
+    users User[]
+}
+
+model HMUserSubscription {
+    hmUserSubscriptionId String    @id @default(auto()) @map("_id") @db.ObjectId
+    userId               String    @unique @db.ObjectId
+    businessId           String    @db.ObjectId
+    maxBranches          Int       @default(0)
+    maxItems             Int       @default(0)
+    maxHMRoles           Int       @default(0)
+    maxHMUsers           Int       @default(0)
+    orderLimit           Int       @default(0)
+    expiredDate          DateTime  @default(now())
+    createdDate          DateTime  @default(now())
+    updatedDate          DateTime?
+    createdBy            String    @db.ObjectId
+    updatedBy            String?   @db.ObjectId
+
+    user User @relation(fields: [userId], references: [userId])
+}
+
+model BusinessSubscription {
+    subscriptionId String    @id @default(auto()) @map("_id") @db.ObjectId
+    businessId     String    @db.ObjectId
+    maxHMRoles     Int       @default(0)
+    maxHMUsers     Int       @default(0)
+    maxBranches    Int       @default(0)
+    maxItems       Int       @default(0)
+    orderLimit     Int       @default(0)
+    expiredDate    DateTime  @default(now())
+    createdDate    DateTime  @default(now())
+    updatedDate    DateTime?
+    createdBy      String    @db.ObjectId
+    updatedBy      String?   @db.ObjectId
 }

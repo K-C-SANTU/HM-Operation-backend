@@ -1,17 +1,17 @@
-import express, { Application } from "express";
-import dotenv from "dotenv";
-import { PrismaClient } from "@prisma/client";
-import helmet from "helmet";
 import cors from "cors";
-import authRoutes from "./users/routes/authRoutes";
+import dotenv from "dotenv";
+import type { Application } from "express";
+import express from "express";
+import helmet from "helmet";
+
+import { startServer } from "@HM/prisma";
+import authRoutes from "@HM/users/routes/authRoutes";
+
+import "@HM/interface/override.types";
 
 dotenv.config();
 
 const app: Application = express();
-const PORT = process.env.PORT || 5000;
-
-// Initialize Prisma Client
-const prisma = new PrismaClient();
 
 // Middleware
 app.use(helmet()); // Security headers
@@ -21,27 +21,16 @@ app.use(express.json());
 // Routes
 app.use("/api/auth", authRoutes);
 
+// Health check route
+app.get("/health", (_, res) => res.status(200).json({ status: "ok" }));
+
 // Basic route
-app.get("/", (req, res) => res.send("Hotel Management Backend Running"));
+app.get("/", (_, res) => res.send("Hotel Management Backend Running"));
 
 // Global error handler
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: Error, _: express.Request, res: express.Response) => {
     console.error(err.stack);
     res.status(500).json({ error: "Something went wrong!" });
 });
 
-// Start server with async DB connection
-async function startServer() {
-    try {
-        await prisma.$connect(); // Connect to MongoDB
-        console.log("MongoDB connected via Prisma");
-        app.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
-        });
-    } catch (err) {
-        console.error("DB connection error:", err);
-        process.exit(1); // Exit on connection failure
-    }
-}
-
-startServer();
+startServer(app);

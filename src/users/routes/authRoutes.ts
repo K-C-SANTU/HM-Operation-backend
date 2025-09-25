@@ -1,7 +1,8 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
-import { register, login } from "../controllers/authController";
-import { validate, registerSchema, loginSchema } from "../middleware/joiValidationMiddleware";
+
+import { login } from "@HM/users/controllers/authController";
+import { loginSchema, validate } from "@HM/users/middleware/joiValidationMiddleware";
 
 const router = express.Router();
 
@@ -12,7 +13,6 @@ const limiter = rateLimit({
     message: "Too many requests, please try again later.",
 });
 
-router.post("/register", limiter, validate(registerSchema), register);
 router.post("/login", limiter, validate(loginSchema), login);
 
 export default router;

@@ -1,54 +1,39 @@
-import { Request, Response } from "express";
-import UserModel from "../models/userModel";
-import { hashPassword, comparePassword, generateToken } from "../utils/authUtils";
-import { sendErrorResponse } from "../utils/errorUtils";
-import { RegisterRequest, LoginRequest } from "../../types";
+import type { User } from "@prisma/client";
+import type { Request, Response } from "express";
 
-export const register = async (req: Request<{}, {}, RegisterRequest>, res: Response) => {
-    const { name, email, password } = req.body;
+import type { LoginRequest } from "@HM/interface/types";
+import { prisma } from "@HM/prisma";
+import { comparePassword, generateToken } from "@HM/users/utils/authUtils";
+import { sendErrorResponse } from "@HM/utils/errorUtils";
 
-    try {
-        if (!name || !email || !password) {
-            return sendErrorResponse(res, 400, "All fields are required");
-        }
-
-        const existingUser = await UserModel.findOne({ email });
-        if (existingUser) {
-            return sendErrorResponse(res, 400, "User already exists");
-        }
-
-        const hashedPassword = await hashPassword(password);
-        const user = new UserModel({ name, email, password: hashedPassword });
-        await user.save();
-
-        const token = generateToken({ userId: user._id as string });
-        res.status(201).json({ message: "User registered", token });
-    } catch (error) {
-        sendErrorResponse(res, 500, "Server error");
-    }
-};
-
-export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) => {
+export const login = async (req: Request<object, object, LoginRequest>, res: Response) => {
     const { email, password } = req.body;
-
     try {
         if (!email || !password) {
-            return sendErrorResponse(res, 400, "Email and password are required");
+            sendErrorResponse(res, 400, "Email and password are required");
+            return;
         }
-
-        const user = await UserModel.findOne({ email });
+        const user = await prisma.user.findFirst({
+            where: {
+                email,
+                expiredDate: {
+                    gt: new Date(),
+                },
+            },
+        });
         if (!user) {
-            return sendErrorResponse(res, 401, "Invalid credentials");
+            sendErrorResponse(res, 401, "Invalid credentials");
+            return;
         }
-
         const isMatch = await comparePassword(password, user.password);
         if (!isMatch) {
-            return sendErrorResponse(res, 401, "Invalid credentials");
+            sendErrorResponse(res, 401, "Invalid credentials");
+            return;
         }
 
-        const token = generateToken({ userId: user._id as string });
+        const token = generateToken<User>(user, String(process.env.JWT_SECRET), 10000);
         res.status(200).json({ message: "Login successful", token });
-    } catch (error) {
+    } catch (_) {
         sendErrorResponse(res, 500, "Server error");
     }
 };

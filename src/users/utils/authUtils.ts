@@ -1,8 +1,5 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { JwtPayload } from "../../types";
-
-const JWT_SECRET = process.env.JWT_SECRET as string;
 
 export const hashPassword = async (password: string): Promise<string> => {
     const salt = await bcrypt.genSalt(10);
@@ -13,10 +10,12 @@ export const comparePassword = async (candidate: string, hashed: string): Promis
     return bcrypt.compare(candidate, hashed);
 };
 
-export const generateToken = (payload: { userId: string }): string => {
-    return jwt.sign(payload, JWT_SECRET, { expiresIn: "1h" });
-};
+// Sign a JWT with a generic payload type
+export function generateToken<T extends object>(payload: T, jwtSecret: string, expiresIn: number): string {
+    return jwt.sign(payload, jwtSecret, { expiresIn });
+}
 
-export const verifyToken = (token: string): JwtPayload => {
-    return jwt.verify(token, JWT_SECRET) as JwtPayload;
-};
+// Verify a JWT and return the decoded payload as the expected type
+export function verifyToken<T extends object>(token: string, jwtSecret: string): T {
+    return jwt.verify(token, jwtSecret) as T;
+}
